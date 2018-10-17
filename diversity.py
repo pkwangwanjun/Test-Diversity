@@ -23,16 +23,22 @@ from scipy.linalg.misc import norm
 import multiprocessing
 
 
-def adv_example(x,y,model_path='./model/model_mnist.hdf5'):
+def adv_example(x,y,model_path='./model/model_mnist.hdf5',dataset='mnist'):
     keras.backend.set_learning_phase(0)
     model=load_model(model_path)
     foolmodel=foolbox.models.KerasModel(model,bounds=(0,1),preprocessing=(0,1))
     attack=foolbox.attacks.IterativeGradientAttack(foolmodel)
     #attack=foolbox.attacks.DeepFoolL2Attack(foolmodel)
     result=[]
+    if dataset=='mnist':
+        w,h=28,28
+    elif dataset=='cifar10':
+        w,h=32,32
+    else:
+        return False
     for image in tqdm(x):
         #adv=attack(image.reshape(28,28,-1),label=y,steps=1000,subsample=10)
-        adv=attack(image.reshape(28,28,-1),y,epsilons=[0.01,0.1],steps=10)
+        adv=attack(image.reshape(w,h,-1),y,epsilons=[0.01,0.1],steps=10)
         if isinstance(adv,np.ndarray):
             result.append(adv)
         else:
