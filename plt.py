@@ -94,4 +94,21 @@ def plt4(df):
 
 
 if __name__=='__main__':
-    pass
+    '''
+    acc,entropy,random_entropy,auc_micro
+    '''
+    for i in [20,50,100,200,500,1000]:
+        df=pd.read_csv('./exp_output/mnist_{}.csv'.format(i))
+        df=df.T
+        df=df.iloc[1:]
+        df=df.apply(lambda x:x-x.min())
+        df.sort_values(0,inplace=True)
+        plt.scatter(range(len(df)),df[0])
+        plt.savefig('./jpg/acc_{}.jpg'.format(i))
+        plt.clf()
+        plt.scatter(range(len(df)),df[1])
+        plt.savefig('./jpg/entropy_{}.jpg'.format(i))
+        plt.clf()
+        plt.scatter(range(len(df)),df[2])
+        plt.savefig('./jpg/random_entropy_{}.jpg'.format(i))
+        plt.clf()

@@ -12,6 +12,7 @@ import cv2
 from tqdm import tqdm
 #导入数据集
 from keras.datasets import mnist
+from keras.datasets import cifar10
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import roc_auc_score
@@ -79,6 +80,24 @@ def generate_mnist_sample(label,ratio=0.1):
     adv=adv_example(image_org,label)
     return image_org,fat,thin,adv
 
+def generate_cifar_sample(label,ratio=0.1):
+    (X_train, Y_train), (X_test, Y_test) = cifar10.load_data()  # 32*32
+    X_train = X_train.astype('float32').reshape(-1,32,32,3)
+    X_test = X_test.astype('float32').reshape(-1,32,32,3)
+    X_train /= 255
+    X_test /= 255
+
+    Y_train=Y_train.reshape(-1)
+    Y_test=Y_test.reshape(-1)
+
+    image_org=X_test[Y_test==label]
+
+    choice_index=np.random.choice(range(len(image_org)),size=int(len(image_org)*ratio),replace=False)
+    image_org=image_org[choice_index]
+
+    adv=adv_example(image_org,label,model_path='./model/model_cifar10.hdf5',dataset='cifar10')
+    return image_org,adv
+
 def graph_distance(x,span=True):
     '''
     x是采样的图片向量
@@ -135,28 +154,47 @@ def Exp_one(image,label,size=500,sample_epoch=500):
         auc_micro.append(roc_auc_score(label_onehot[index_choice],pred[index_choice],average='micro'))
     return acc,entropy,random_entropy,auc_micro
 
+def Exp_two(image,label,size=500,sample_epoch=500):
+    model=load_model('model/model_cifar10.hdf5')
+    pred=model.predict(image)
+    acc=[]
+    entropy=[]
+    random_entropy=[]
+    auc_macro=[]
+    auc_micro=[]
+    label_onehot=pd.get_dummies(label).values
+    for i in tqdm(range(sample_epoch)):
+        index_choice=np.random.choice(range(image.shape[0]),size=size,replace=False)
+        acc.append(accuracy_score(label[index_choice],np.argmax(pred[index_choice],axis=1)))
+        entropy.append(graph_distance(pred[index_choice]))
+        random_entropy.append(graph_distance(pred[index_choice],span=False))
 
-def pool_func(size,sample_epoch):
+        #auc_macro.append(roc_auc_score(label_onehot[index_choice],pred[index_choice],average='macro'))
+        auc_micro.append(roc_auc_score(label_onehot[index_choice],pred[index_choice],average='micro'))
+    return acc,entropy,random_entropy,auc_micro
+
+
+def pool_func(size,sample_epoch,sample_func,exp_func):
     image=[]
     label=[]
     for i in range(10):
-        org,fat,thin,adv=generate_mnist_sample(label=i,ratio=0.1)
+        org,fat,thin,adv=sample_func(label=i,ratio=0.1)
         temp_image=np.concatenate([org,fat,thin,adv],axis=0)
         temp_label=i*np.ones(len(temp_image))
         image.append(temp_image.copy())
         label.append(temp_label.copy())
     image=np.concatenate(image,axis=0)
     label=np.concatenate(label,axis=0)
-    acc,entropy,random_entropy,auc_micro=Exp_one(image,label,size=size,sample_epoch=sample_epoch)
+    acc,entropy,random_entropy,auc_micro=exp_func(image,label,size=size,sample_epoch=sample_epoch)
     df=pd.DataFrame([acc,entropy,random_entropy,auc_micro])
     df.to_csv('./exp_output/mnist_{}.csv'.format(size))
 
 
 
 if __name__=='__main__':
-    pool = multiprocessing.Pool(processes=2)
+    pool = multiprocessing.Pool(processes=1)
     sample_epoch=500
-    for size in [20,50]:
-        pool.apply_async(pool_func, (size,sample_epoch,))
+    for size in [20]:
+        pool.apply_async(pool_func, (size,sample_epoch,generate_cifar_sample,Exp_two))
     pool.close()
     pool.join()
