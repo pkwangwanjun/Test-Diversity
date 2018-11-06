@@ -27,6 +27,10 @@ from scipy.linalg.misc import norm
 import multiprocessing
 import keras
 
+import warnings
+
+warnings.filterwarnings('ignore')
+
 
 #diversity_vector=Model(inputs=model.layers[0].output,outputs=model.layers[-2].output)
 

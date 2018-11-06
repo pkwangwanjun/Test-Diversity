@@ -1,10 +1,14 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
+
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
 import os
+from scipy.stats import spearmanr
 
 
 sns.set_style('whitegrid')
@@ -92,13 +96,9 @@ def plt4(df):
     plt.savefig('last4.jpg')
     plt.clf()
 
-
-if __name__=='__main__':
-    '''
-    acc,entropy,random_entropy,auc_micro
-    '''
+def plt_new():
     for i in [20,50,100,200,500,1000]:
-        df=pd.read_csv('./exp_output/mnist_{}.csv'.format(i))
+        df=pd.read_csv('./exp_output/cifar_{}.csv'.format(i))
         df=df.T
         df=df.iloc[1:]
         df=df.apply(lambda x:x-x.min())
@@ -112,3 +112,22 @@ if __name__=='__main__':
         plt.scatter(range(len(df)),df[2])
         plt.savefig('./jpg/random_entropy_{}.jpg'.format(i))
         plt.clf()
+
+def pearson():
+    '''
+    acc,entropy,random_entropy,auc_micro
+    '''
+    for i in [20,50,100,200,500,1000]:
+        df=pd.read_csv('./exp_output/cifar20_square_{}.csv'.format(i))
+        df=df.T
+        df=df.iloc[1:]
+
+        print('index_entropy:{},spearson:{}'.format(i,spearmanr(df[0],df[1])[0]))
+        #print('index_random_entropy:{},spearson:{}'.format(i,spearmanr(df[0],df[2])[0]))
+
+
+if __name__=='__main__':
+    '''
+    acc,entropy,random_entropy,auc_micro
+    '''
+    pearson()
